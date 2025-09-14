@@ -4,9 +4,7 @@ pragma solidity ^0.8.24;
 contract SealedVote {
     struct Poll {
         uint64 commitEnd;
-        uint64 revealEnd;
         uint8  numOptions;
-        bool   finalized;
         address creator;
         mapping(address => bytes32) commitment;
         mapping(address => bool) revealed;
@@ -16,27 +14,24 @@ contract SealedVote {
     mapping(uint256 => Poll) private _polls;
     uint256 public pollCount;
 
-    event PollCreated(uint256 indexed pollId, address indexed creator, uint8 numOptions, uint64 commitEnd, uint64 revealEnd);
+    event PollCreated(uint256 indexed pollId, address indexed creator, uint8 numOptions, uint64 commitEnd);
     event Committed(uint256 indexed pollId, address indexed voter);
     event Revealed(uint256 indexed pollId, address indexed voter, uint8 optionIndex);
-    event Finalized(uint256 indexed pollId, uint8 winningOption);
 
-    function createPoll(uint8 numOptions, uint32 commitSeconds, uint32 revealSeconds)
+    function createPoll(uint8 numOptions, uint32 commitSeconds)
         external returns (uint256 pollId)
     {
         require(numOptions >= 2 && numOptions <= 8, "bad options");
         uint64 commitEnd = uint64(block.timestamp + commitSeconds);
-        uint64 revealEnd = uint64(commitEnd + revealSeconds);
 
         pollId = ++pollCount;
         Poll storage p = _polls[pollId];
         p.commitEnd = commitEnd;
-        p.revealEnd = revealEnd;
         p.numOptions = numOptions;
         p.creator = msg.sender;
         p.tally = new uint32[](numOptions);
 
-        emit PollCreated(pollId, msg.sender, numOptions, commitEnd, revealEnd);
+        emit PollCreated(pollId, msg.sender, numOptions, commitEnd);
     }
 
     function commit(uint256 pollId, bytes32 commitment) external {
@@ -49,7 +44,7 @@ contract SealedVote {
 
     function reveal(uint256 pollId, uint8 optionIndex, bytes32 salt) external {
         Poll storage p = _polls[pollId];
-        require(block.timestamp >= p.commitEnd && block.timestamp < p.revealEnd, "not reveal phase");
+        require(block.timestamp >= p.commitEnd, "commit phase not over");
         require(optionIndex < p.numOptions, "bad option");
         bytes32 c = p.commitment[msg.sender];
         require(c != bytes32(0), "no commit");
@@ -63,29 +58,16 @@ contract SealedVote {
         emit Revealed(pollId, msg.sender, optionIndex);
     }
 
-    function finalize(uint256 pollId) external returns (uint8 winning) {
-        Poll storage p = _polls[pollId];
-        require(!p.finalized, "finalized");
-        require(block.timestamp >= p.revealEnd, "reveal not over");
-        uint32 maxVotes = 0;
-        for (uint8 i = 0; i < p.numOptions; i++) {
-            if (p.tally[i] > maxVotes) { maxVotes = p.tally[i]; winning = i; }
-        }
-        p.finalized = true;
-        emit Finalized(pollId, winning);
-    }
 
     // Views for frontend
-    function getPollTimes(uint256 pollId) external view returns (uint64 commitEnd, uint64 revealEnd) {
-        Poll storage p = _polls[pollId];
-        return (p.commitEnd, p.revealEnd);
+    function getCommitEnd(uint256 pollId) external view returns (uint64 commitEnd) {
+        return _polls[pollId].commitEnd;
     }
     function getNumOptions(uint256 pollId) external view returns (uint8) {
         return _polls[pollId].numOptions;
     }
-    function getTally(uint256 pollId) external view returns (uint32[] memory tally, bool finalized) {
-        Poll storage p = _polls[pollId];
-        return (p.tally, p.finalized);
+    function getTally(uint256 pollId) external view returns (uint32[] memory tally) {
+        return _polls[pollId].tally;
     }
     function hasCommitted(uint256 pollId, address voter) external view returns (bool) {
         return _polls[pollId].commitment[voter] != bytes32(0);
