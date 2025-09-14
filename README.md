@@ -63,33 +63,26 @@ TrueCount/
 
 ### Installation
 
-1. **Clone & Install Dependencies**
-   ```bash
-   git clone https://github.com/your-username/TrueCount.git
-   cd TrueCount
-   npm install
-   ```
 
-2. **Backend Setup (Blockchain)**
+1. **Backend Setup (Blockchain)**
    ```bash
-   cd truecount-backend
+   cd ../truecount-backend
    npm install
    npm run compile
    npm run node  # Start local blockchain
    ```
    > Keep this terminal running - it will be your local blockchain!
 
-3. **Deploy Smart Contracts**
+2. **Deploy Smart Contracts**
    
    In a new terminal:
    ```bash
-   cd truecount-backend
    npm run deploy  # Deploy smart contracts
    ```
    
-   📋 **Important**: Copy the deployed contract address from the output!
+   📋 **Important**: Copy the deployed contract address from the output and add to NEXT_PUBLIC_CONTRACT_ADDRESS in env
 
-4. **Launch Frontend**
+3. **Launch Frontend**
    
    In another terminal:
    ```bash
@@ -98,10 +91,9 @@ TrueCount/
    npm run dev
    ```
    
-   🌐 Open [http://localhost:3000](http://localhost:3000) and connect your wallet
+   🌐 Open [http://localhost:3000](http://localhost:3000) and connect your wallet *We recommend using Metamask
+   (Both web application and blockchain are locally hosted)
    
-   > 💡 **Tip**: Import a Hardhat test account if using the local node
-
 ## 🗳 Voting Lifecycle
 
 ### Phase 1: Create Poll
