@@ -15,8 +15,8 @@ export default function CreatePollPage() {
   const [options, setOptions] = useState(['', '']);
   const [password, setPassword] = useState('');
   const [isProtected, setIsProtected] = useState(false);
-  const [commitDuration, setCommitDuration] = useState(7); // days
-  const [revealDuration, setRevealDuration] = useState(3); // days
+  const [commitDuration, setCommitDuration] = useState(60); // seconds (1 minute)
+  const [revealDuration, setRevealDuration] = useState(60); // seconds (1 minute)
 
   const { address, isConnected } = useAccount();
   const router = useRouter();
@@ -83,9 +83,9 @@ export default function CreatePollPage() {
       return;
     }
 
-    // Convert days to seconds
-    const commitSeconds = commitDuration * 24 * 60 * 60;
-    const revealSeconds = revealDuration * 24 * 60 * 60;
+    // Duration is already in seconds
+    const commitSeconds = commitDuration;
+    const revealSeconds = revealDuration;
 
     createPoll(validOptions.length, commitSeconds, revealSeconds);
   };
@@ -191,11 +191,11 @@ export default function CreatePollPage() {
               </label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-gray-300 mb-2">Commit Phase (days)</label>
+                  <label className="block text-gray-300 mb-2">Commit Phase (seconds)</label>
                   <input
                     type="number"
-                    min="1"
-                    max="30"
+                    min="10"
+                    max="3600"
                     value={commitDuration}
                     onChange={(e) => setCommitDuration(Number(e.target.value))}
                     className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 transition-all duration-300"
@@ -205,11 +205,11 @@ export default function CreatePollPage() {
                   </p>
                 </div>
                 <div>
-                  <label className="block text-gray-300 mb-2">Reveal Phase (days)</label>
+                  <label className="block text-gray-300 mb-2">Reveal Phase (seconds)</label>
                   <input
                     type="number"
-                    min="1"
-                    max="30"
+                    min="10"
+                    max="3600"
                     value={revealDuration}
                     onChange={(e) => setRevealDuration(Number(e.target.value))}
                     className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 transition-all duration-300"
