@@ -1,0 +1,35 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-18341a2f29c81cc414203d402e9c4d539484eed1",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/SealedVote.sol": "project/contracts/SealedVote.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/SealedVote.sol": {
+        "content": "/** SPDX-License-Identifier: MIT */\npragma solidity ^0.8.24;\n\ncontract SealedVote {\n    struct Poll {\n        uint64 commitEnd;\n        uint8  numOptions;\n        address creator;\n        string title;\n        string description;\n        string[] options;\n        mapping(address => bytes32) commitment;\n        mapping(address => bool) revealed;\n        uint32[] tally;\n    }\n\n    mapping(uint256 => Poll) private _polls;\n    uint256 public pollCount;\n\n    event PollCreated(uint256 indexed pollId, address indexed creator, uint8 numOptions, uint64 commitEnd, string title, string description);\n    event Committed(uint256 indexed pollId, address indexed voter);\n    event Revealed(uint256 indexed pollId, address indexed voter, uint8 optionIndex);\n\n    function createPoll(uint8 numOptions, uint32 commitSeconds, string memory title, string memory description, string[] memory options)\n        external returns (uint256 pollId)\n    {\n        require(numOptions >= 2 && numOptions <= 8, \"bad options\");\n        require(bytes(title).length > 0, \"title required\");\n        require(bytes(description).length > 0, \"description required\");\n        require(options.length == numOptions, \"options length mismatch\");\n        \n        uint64 commitEnd = uint64(block.timestamp + commitSeconds);\n\n        pollId = ++pollCount;\n        Poll storage p = _polls[pollId];\n        p.commitEnd = commitEnd;\n        p.numOptions = numOptions;\n        p.creator = msg.sender;\n        p.title = title;\n        p.description = description;\n        p.options = options;\n        p.tally = new uint32[](numOptions);\n\n        emit PollCreated(pollId, msg.sender, numOptions, commitEnd, title, description);\n    }\n\n    function commit(uint256 pollId, bytes32 commitment) external {\n        Poll storage p = _polls[pollId];\n        require(block.timestamp < p.commitEnd, \"commit over\");\n        require(p.commitment[msg.sender] == bytes32(0), \"already committed\");\n        p.commitment[msg.sender] = commitment;\n        emit Committed(pollId, msg.sender);\n    }\n\n    function reveal(uint256 pollId, uint8 optionIndex, bytes32 salt) external {\n        Poll storage p = _polls[pollId];\n        require(block.timestamp >= p.commitEnd, \"commit phase not over\");\n        require(optionIndex < p.numOptions, \"bad option\");\n        bytes32 c = p.commitment[msg.sender];\n        require(c != bytes32(0), \"no commit\");\n        require(!p.revealed[msg.sender], \"already revealed\");\n\n        bytes32 recomputed = keccak256(abi.encodePacked(optionIndex, salt, msg.sender, pollId));\n        require(recomputed == c, \"mismatch\");\n\n        p.revealed[msg.sender] = true;\n        p.tally[optionIndex] += 1;\n        emit Revealed(pollId, msg.sender, optionIndex);\n    }\n\n\n    // Views for frontend\n    function getCommitEnd(uint256 pollId) external view returns (uint64 commitEnd) {\n        return _polls[pollId].commitEnd;\n    }\n    function getNumOptions(uint256 pollId) external view returns (uint8) {\n        return _polls[pollId].numOptions;\n    }\n    function getTally(uint256 pollId) external view returns (uint32[] memory tally) {\n        return _polls[pollId].tally;\n    }\n    function getTitle(uint256 pollId) external view returns (string memory) {\n        return _polls[pollId].title;\n    }\n    function getDescription(uint256 pollId) external view returns (string memory) {\n        return _polls[pollId].description;\n    }\n    function getOptions(uint256 pollId) external view returns (string[] memory) {\n        return _polls[pollId].options;\n    }\n    function getCreator(uint256 pollId) external view returns (address) {\n        return _polls[pollId].creator;\n    }\n    function hasCommitted(uint256 pollId, address voter) external view returns (bool) {\n        return _polls[pollId].commitment[voter] != bytes32(0);\n    }\n    function hasRevealed(uint256 pollId, address voter) external view returns (bool) {\n        return _polls[pollId].revealed[voter];\n    }\n}"
+      }
+    }
+  }
+}

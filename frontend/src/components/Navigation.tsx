@@ -19,6 +19,7 @@ export default function Navigation() {
 
   const navItems = [
     { name: 'Home', href: '/' },
+    { name: 'Polls', href: '/#polls' },
     { name: 'About', href: '/#about' },
     { name: 'Create Poll', href: '/create-poll' },
     { name: 'Find Poll', href: '/find-poll' },

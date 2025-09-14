@@ -2,6 +2,7 @@ import Navigation from '@/components/Navigation';
 import FloatingParticles from '@/components/FloatingParticles';
 import FlowingBackground from '@/components/FlowingBackground';
 import HeroSection from '@/components/HeroSection';
+import CurrentPolls from '@/components/CurrentPolls';
 
 export default function Home() {
   return (
@@ -17,6 +18,11 @@ export default function Home() {
       {/* Hero Section */}
       <section id="home">
         <HeroSection />
+      </section>
+
+      {/* Current Polls Section */}
+      <section id="polls">
+        <CurrentPolls />
       </section>
 
       {/* Future of Polling Section */}

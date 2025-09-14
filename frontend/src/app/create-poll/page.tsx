@@ -15,8 +15,7 @@ export default function CreatePollPage() {
   const [options, setOptions] = useState(['', '']);
   const [password, setPassword] = useState('');
   const [isProtected, setIsProtected] = useState(false);
-  const [commitDuration, setCommitDuration] = useState(60); // seconds (1 minute)
-  const [revealDuration, setRevealDuration] = useState(60); // seconds (1 minute)
+  const [commitDuration, setCommitDuration] = useState(1); // hours
 
   const { address, isConnected } = useAccount();
   const router = useRouter();
@@ -73,6 +72,25 @@ export default function CreatePollPage() {
       return;
     }
 
+    // Validate required fields
+    if (!pollTitle.trim()) {
+      showToast({
+        type: 'error',
+        title: 'Title Required',
+        description: 'Please provide a title for your poll.',
+      });
+      return;
+    }
+
+    if (!pollDescription.trim()) {
+      showToast({
+        type: 'error',
+        title: 'Description Required',
+        description: 'Please provide a description for your poll.',
+      });
+      return;
+    }
+
     const validOptions = options.filter(option => option.trim() !== '');
     if (validOptions.length < 2) {
       showToast({
@@ -83,11 +101,8 @@ export default function CreatePollPage() {
       return;
     }
 
-    // Duration is already in seconds
-    const commitSeconds = commitDuration;
-    const revealSeconds = revealDuration;
-
-    createPoll(validOptions.length, commitSeconds, revealSeconds);
+    // Duration is in hours, pass it directly
+    createPoll(validOptions.length, commitDuration, pollTitle, pollDescription, validOptions);
   };
 
   return (
@@ -115,7 +130,7 @@ export default function CreatePollPage() {
             {/* Poll Title */}
             <div className="glass rounded-xl p-6">
               <label className="block text-white font-semibold mb-3">
-                Poll Title
+                Poll Title <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
@@ -133,14 +148,15 @@ export default function CreatePollPage() {
             {/* Poll Description */}
             <div className="glass rounded-xl p-6">
               <label className="block text-white font-semibold mb-3">
-                Poll Description
+                Poll Description <span className="text-red-400">*</span>
               </label>
               <textarea
                 value={pollDescription}
                 onChange={(e) => setPollDescription(e.target.value)}
-                placeholder="Describe your poll so voters have context (optional)."
+                placeholder="Describe your poll so voters have context."
                 rows={4}
                 className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 transition-all duration-300 resize-none"
+                required
               />
               <p className="text-sm text-gray-400 mt-2">
                 Example: "Give background or explain why this decision matters."
@@ -189,35 +205,19 @@ export default function CreatePollPage() {
               <label className="block text-white font-semibold mb-4">
                 Poll Duration
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-gray-300 mb-2">Commit Phase (seconds)</label>
-                  <input
-                    type="number"
-                    min="10"
-                    max="3600"
-                    value={commitDuration}
-                    onChange={(e) => setCommitDuration(Number(e.target.value))}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 transition-all duration-300"
-                  />
-                  <p className="text-sm text-gray-400 mt-1">
-                    How long voters can commit their votes
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-gray-300 mb-2">Reveal Phase (seconds)</label>
-                  <input
-                    type="number"
-                    min="10"
-                    max="3600"
-                    value={revealDuration}
-                    onChange={(e) => setRevealDuration(Number(e.target.value))}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 transition-all duration-300"
-                  />
-                  <p className="text-sm text-gray-400 mt-1">
-                    How long voters can reveal their votes
-                  </p>
-                </div>
+              <div>
+                <label className="block text-gray-300 mb-2">Commit Phase (hours)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="24"
+                  value={commitDuration}
+                  onChange={(e) => setCommitDuration(Number(e.target.value))}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 transition-all duration-300"
+                />
+                <p className="text-sm text-gray-400 mt-1">
+                  How long voters can commit their votes (in hours). After this period, voters can reveal their votes forever.
+                </p>
               </div>
             </div>
 

@@ -1,0 +1,2 @@
+node scripts/setup-demo.js
+cd /Users/martinpatrouchev/Desktop/Hackathon/TrueCount/hardhat-example/hardhat-project && npx hardhat console --network localhost

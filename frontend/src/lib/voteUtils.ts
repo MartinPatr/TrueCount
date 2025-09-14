@@ -48,7 +48,7 @@ export function clearVoteData(pollId: string, voter: string) {
   localStorage.removeItem(key);
 }
 
-// Format time remaining for display
+// Format time remaining for display - show only highest unit
 export function formatTimeRemaining(seconds: number): string {
   if (seconds <= 0) return '0s';
   
@@ -57,11 +57,9 @@ export function formatTimeRemaining(seconds: number): string {
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
   
-  const parts = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0) parts.push(`${minutes}m`);
-  if (secs > 0) parts.push(`${secs}s`);
-  
-  return parts.join(' ');
+  // Show only the highest non-zero unit
+  if (days > 0) return `${days}d`;
+  if (hours > 0) return `${hours}h`;
+  if (minutes > 0) return `${minutes}m`;
+  return `${secs}s`;
 }

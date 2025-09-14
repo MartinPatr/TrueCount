@@ -6,7 +6,9 @@ export const SEALED_VOTE_ABI = [
     "inputs": [
       {"internalType": "uint8", "name": "numOptions", "type": "uint8"},
       {"internalType": "uint32", "name": "commitSeconds", "type": "uint32"},
-      {"internalType": "uint32", "name": "revealSeconds", "type": "uint32"}
+      {"internalType": "string", "name": "title", "type": "string"},
+      {"internalType": "string", "name": "description", "type": "string"},
+      {"internalType": "string[]", "name": "options", "type": "string[]"}
     ],
     "name": "createPoll",
     "outputs": [{"internalType": "uint256", "name": "pollId", "type": "uint256"}],
@@ -35,13 +37,6 @@ export const SEALED_VOTE_ABI = [
     "type": "function"
   },
   {
-    "inputs": [{"internalType": "uint256", "name": "pollId", "type": "uint256"}],
-    "name": "finalize",
-    "outputs": [{"internalType": "uint8", "name": "winning", "type": "uint8"}],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "pollCount",
     "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
@@ -50,10 +45,9 @@ export const SEALED_VOTE_ABI = [
   },
   {
     "inputs": [{"internalType": "uint256", "name": "pollId", "type": "uint256"}],
-    "name": "getPollTimes",
+    "name": "getCommitEnd",
     "outputs": [
-      {"internalType": "uint64", "name": "commitEnd", "type": "uint64"},
-      {"internalType": "uint64", "name": "revealEnd", "type": "uint64"}
+      {"internalType": "uint64", "name": "commitEnd", "type": "uint64"}
     ],
     "stateMutability": "view",
     "type": "function"
@@ -69,8 +63,7 @@ export const SEALED_VOTE_ABI = [
     "inputs": [{"internalType": "uint256", "name": "pollId", "type": "uint256"}],
     "name": "getTally",
     "outputs": [
-      {"internalType": "uint32[]", "name": "tally", "type": "uint32[]"},
-      {"internalType": "bool", "name": "finalized", "type": "bool"}
+      {"internalType": "uint32[]", "name": "tally", "type": "uint32[]"}
     ],
     "stateMutability": "view",
     "type": "function"
@@ -94,21 +87,53 @@ export const SEALED_VOTE_ABI = [
     "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
     "stateMutability": "view",
     "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "uint256", "name": "pollId", "type": "uint256"}],
+    "name": "getTitle",
+    "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "uint256", "name": "pollId", "type": "uint256"}],
+    "name": "getDescription",
+    "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "uint256", "name": "pollId", "type": "uint256"}],
+    "name": "getOptions",
+    "outputs": [{"internalType": "string[]", "name": "", "type": "string[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "uint256", "name": "pollId", "type": "uint256"}],
+    "name": "getCreator",
+    "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+    "stateMutability": "view",
+    "type": "function"
   }
 ] as const;
 
-//UPDATE THIS WITH YOUR DEPLOYED CONTRACT ADDRESS
-export const SEALED_VOTE_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa3' as Address;
+// Contract address from environment variables
+export const SEALED_VOTE_ADDRESS = '0x5fbdb2315678afecb367f032d93f642f64180aa3' as Address;
 
-export type PollPhase = 'COMMIT' | 'REVEAL' | 'FINALIZE';
+export type PollPhase = 'COMMIT' | 'REVEAL';
 
 export interface PollData {
   id: string;
+  title: string;
+  description: string;
   commitEnd: number;
-  revealEnd: number;
   numOptions: number;
   tally: number[];
-  finalized: boolean;
+  options: string[];
   phase: PollPhase;
   timeRemaining: number;
+  totalVotes: number;
+  isProtected: boolean;
+  creator: string;
 }

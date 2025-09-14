@@ -6,7 +6,7 @@ import { useAccount } from 'wagmi';
 import Navigation from '@/components/Navigation';
 import FloatingParticles from '@/components/FloatingParticles';
 import FlowingBackground from '@/components/FlowingBackground';
-import { usePollData, useCommitVote, useRevealVote, useFinalizePoll, useHasCommitted, useHasRevealed } from '@/hooks/usePollData';
+import { usePollData, useCommitVote, useRevealVote, useHasCommitted, useHasRevealed } from '@/hooks/usePollData';
 import { generateSalt, computeCommitment, storeVoteData, getVoteData, clearVoteData, formatTimeRemaining } from '@/lib/voteUtils';
 import { showToast } from '@/components/Toast';
 
@@ -21,26 +21,25 @@ export default function PollDetailPage() {
   
   const { commitVote, isPending: isCommitting, isSuccess: commitSuccess } = useCommitVote();
   const { revealVote, isPending: isRevealing, isSuccess: revealSuccess } = useRevealVote();
-  const { finalizePoll, isPending: isFinalizing, isSuccess: finalizeSuccess } = useFinalizePoll();
   
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [showRevealForm, setShowRevealForm] = useState(false);
 
-  // Mock poll options - in a real app, these would come from the contract or IPFS
-  const pollOptions = [
-    'TrueCount',
-    'Anastasia, Alex, Elyssa, and Martin',
-    'Option 3',
-    'Option 4'
-  ];
+  // Use real poll data from the blockchain
+  const pollOptions = pollData?.options || [];
 
   useEffect(() => {
     if (commitSuccess) {
       showToast({
         type: 'success',
-        title: 'Vote Committed!',
-        description: 'Your vote has been successfully committed. You can now reveal it during the reveal phase.',
+        title: 'Success!',
+        description: 'Your vote has been committed. Wait for the reveal phase to make it count.',
       });
+      
+      // Auto-refresh the page after 2 seconds to show updated state
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     }
   }, [commitSuccess]);
 
@@ -49,21 +48,17 @@ export default function PollDetailPage() {
       showToast({
         type: 'success',
         title: 'Vote Revealed!',
-        description: 'Your vote has been successfully revealed.',
+        description: 'Your vote has been successfully revealed and counted.',
       });
       setShowRevealForm(false);
+      
+      // Auto-refresh the page after 2 seconds to show updated tally
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     }
   }, [revealSuccess]);
 
-  useEffect(() => {
-    if (finalizeSuccess) {
-      showToast({
-        type: 'success',
-        title: 'Poll Finalized!',
-        description: 'The poll has been finalized and results are available.',
-      });
-    }
-  }, [finalizeSuccess]);
 
   const handleCommitVote = async () => {
     if (!address || selectedOption === null) return;
@@ -110,18 +105,8 @@ export default function PollDetailPage() {
     }
   };
 
-  const handleFinalizePoll = async () => {
-    try {
-      await finalizePoll(pollId);
-    } catch (error) {
-      showToast({
-        type: 'error',
-        title: 'Finalize Failed',
-        description: 'Failed to finalize the poll. Please try again.',
-      });
-    }
-  };
 
+  // Show loading state while data is being fetched
   if (!pollData) {
     return (
       <main className="relative min-h-screen overflow-x-hidden">
@@ -131,7 +116,8 @@ export default function PollDetailPage() {
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
-            <p className="text-gray-300">Loading poll data...</p>
+            <p className="text-gray-300">Loading poll data from blockchain...</p>
+            <p className="text-gray-400 text-sm mt-2">This may take a moment</p>
           </div>
         </div>
       </main>
@@ -140,7 +126,6 @@ export default function PollDetailPage() {
 
   const canVote = pollData.phase === 'COMMIT' && !hasCommitted.data;
   const canReveal = pollData.phase === 'REVEAL' && hasCommitted.data && !hasRevealed.data;
-  const canFinalize = pollData.phase === 'FINALIZE' && !pollData.finalized;
 
   return (
     <main className="relative min-h-screen overflow-x-hidden">
@@ -155,17 +140,16 @@ export default function PollDetailPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
               <div>
                 <h1 className="text-3xl font-bold text-white mb-2">
-                  Poll #{pollId}
+                  {pollData.title}
                 </h1>
                 <p className="text-gray-300">
-                  Which project should win the People's Choice Award?
+                  {pollData.description}
                 </p>
               </div>
               <div className="text-right">
                 <div className={`px-4 py-2 rounded-lg font-semibold ${
                   pollData.phase === 'COMMIT' ? 'bg-blue-500/20 text-blue-300' :
-                  pollData.phase === 'REVEAL' ? 'bg-yellow-500/20 text-yellow-300' :
-                  'bg-green-500/20 text-green-300'
+                  'bg-yellow-500/20 text-yellow-300'
                 }`}>
                   {pollData.phase} PHASE
                 </div>
@@ -180,15 +164,55 @@ export default function PollDetailPage() {
               <div className={`flex-1 h-2 rounded-full mr-2 ${
                 pollData.phase === 'COMMIT' ? 'bg-blue-500' : 'bg-blue-500/50'
               }`}></div>
-              <div className={`flex-1 h-2 rounded-full mr-2 ${
-                pollData.phase === 'REVEAL' ? 'bg-yellow-500' : 
-                pollData.phase === 'FINALIZE' ? 'bg-yellow-500/50' : 'bg-yellow-500/30'
-              }`}></div>
               <div className={`flex-1 h-2 rounded-full ${
-                pollData.phase === 'FINALIZE' ? 'bg-green-500' : 'bg-green-500/30'
+                pollData.phase === 'REVEAL' ? 'bg-yellow-500' : 'bg-yellow-500/30'
               }`}></div>
             </div>
           </div>
+
+          {/* Status Messages */}
+          {hasCommitted.data && pollData.phase === 'COMMIT' && (
+            <div className="glass rounded-xl p-6 mb-8 bg-blue-500/10 border border-blue-500/30">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm">✓</span>
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold">Vote Committed</h3>
+                  <p className="text-gray-300 text-sm">Your vote has been committed. Wait for the reveal phase to make it count.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {hasRevealed.data && (
+            <div className="glass rounded-xl p-6 mb-8 bg-green-500/10 border border-green-500/30">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm">✓</span>
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold">Vote Revealed</h3>
+                  <p className="text-gray-300 text-sm">Your vote has been revealed and counted in the final tally.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Poll Closed Message */}
+          {pollData.phase === 'REVEAL' && !hasCommitted.data && (
+            <div className="glass rounded-xl p-6 mb-8 bg-gray-500/10 border border-gray-500/30">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm">⏰</span>
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold">Voting Closed</h3>
+                  <p className="text-gray-300 text-sm">The commit phase has ended. You can no longer vote, but you can still view results and reveal any committed votes.</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Voting Interface */}
           {pollData.phase === 'COMMIT' && !hasCommitted.data && (
@@ -236,22 +260,6 @@ export default function PollDetailPage() {
             </div>
           )}
 
-          {/* Finalize Interface */}
-          {pollData.phase === 'FINALIZE' && !pollData.finalized && (
-            <div className="glass rounded-xl p-8 mb-8">
-              <h2 className="text-2xl font-bold text-white mb-6">Finalize Poll</h2>
-              <p className="text-gray-300 mb-6">
-                The reveal phase has ended. You can now finalize the poll to see the final results.
-              </p>
-              <button
-                onClick={handleFinalizePoll}
-                disabled={isFinalizing}
-                className="px-6 py-3 bg-gradient-to-r from-green-500 to-teal-500 rounded-lg font-semibold text-white hover:shadow-lg hover:shadow-green-500/25 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isFinalizing ? 'Finalizing...' : 'Finalize Poll'}
-              </button>
-            </div>
-          )}
 
           {/* Results */}
           <div className="glass rounded-xl p-8">
@@ -279,13 +287,28 @@ export default function PollDetailPage() {
               })}
             </div>
             
-            {pollData.finalized && (
-              <div className="mt-6 p-4 bg-green-500/20 border border-green-500/30 rounded-lg">
-                <p className="text-green-300 font-semibold">
-                  🎉 Poll Finalized! The winning option is: {pollOptions[pollData.tally.indexOf(Math.max(...pollData.tally))]}
+            {pollData.phase === 'REVEAL' && pollData.tally.some(votes => votes > 0) && (
+              <div className="mt-6 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg">
+                <p className="text-yellow-300 font-semibold">
+                  📊 Live Results - The current leader is: {pollOptions[pollData.tally.indexOf(Math.max(...pollData.tally))]}
                 </p>
               </div>
             )}
+            
+            {/* Poll Info */}
+            <div className="mt-6 pt-6 border-t border-white/10">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-400">
+                <div>
+                  <span className="font-semibold text-white">Poll ID:</span> {pollId}
+                </div>
+                <div>
+                  <span className="font-semibold text-white">Creator:</span> {pollData.creator ? `${pollData.creator.slice(0, 6)}...${pollData.creator.slice(-4)}` : 'Unknown'}
+                </div>
+                <div>
+                  <span className="font-semibold text-white">Total Votes:</span> {pollData.totalVotes}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

@@ -1,0 +1,24 @@
+{
+  "name": "truecount-backend",
+  "version": "1.0.0",
+  "description": "TrueCount Backend - Blockchain voting system smart contracts and utilities",
+  "type": "module",
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy": "hardhat run scripts/deploy.js --network localhost",
+    "advance-time": "hardhat run scripts/advance-time.js --network localhost",
+    "check-poll": "hardhat run scripts/check-poll.js --network localhost",
+    "create-demo": "hardhat run scripts/create-demo-poll.js --network localhost",
+    "node": "hardhat node",
+    "clean": "hardhat clean"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ignition": "^3.0.3",
+    "@nomicfoundation/hardhat-toolbox-viem": "^5.0.0",
+    "@types/node": "^22.18.3",
+    "forge-std": "github:foundry-rs/forge-std#v1.9.4",
+    "hardhat": "^3.0.6",
+    "typescript": "~5.8.0",
+    "viem": "^2.37.5"
+  }
+}

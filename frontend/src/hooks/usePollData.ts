@@ -7,15 +7,23 @@ export function usePollCount() {
     address: SEALED_VOTE_ADDRESS,
     abi: SEALED_VOTE_ABI,
     functionName: 'pollCount',
+    query: {
+      retry: 3,
+      retryDelay: 1000,
+    },
   });
 }
 
-export function usePollTimes(pollId: string) {
+export function useCommitEnd(pollId: string) {
   return useReadContract({
     address: SEALED_VOTE_ADDRESS,
     abi: SEALED_VOTE_ABI,
-    functionName: 'getPollTimes',
+    functionName: 'getCommitEnd',
     args: [BigInt(pollId)],
+    query: {
+      retry: 3,
+      retryDelay: 1000,
+    },
   });
 }
 
@@ -25,6 +33,10 @@ export function useNumOptions(pollId: string) {
     abi: SEALED_VOTE_ABI,
     functionName: 'getNumOptions',
     args: [BigInt(pollId)],
+    query: {
+      retry: 3,
+      retryDelay: 1000,
+    },
   });
 }
 
@@ -34,6 +46,10 @@ export function useTally(pollId: string) {
     abi: SEALED_VOTE_ABI,
     functionName: 'getTally',
     args: [BigInt(pollId)],
+    query: {
+      retry: 3,
+      retryDelay: 1000,
+    },
   });
 }
 
@@ -43,6 +59,10 @@ export function useHasCommitted(pollId: string, voter: string) {
     abi: SEALED_VOTE_ABI,
     functionName: 'hasCommitted',
     args: [BigInt(pollId), voter as `0x${string}`],
+    query: {
+      retry: 3,
+      retryDelay: 1000,
+    },
   });
 }
 
@@ -52,53 +72,114 @@ export function useHasRevealed(pollId: string, voter: string) {
     abi: SEALED_VOTE_ABI,
     functionName: 'hasRevealed',
     args: [BigInt(pollId), voter as `0x${string}`],
+    query: {
+      retry: 3,
+      retryDelay: 1000,
+    },
+  });
+}
+
+export function usePollTitle(pollId: string) {
+  return useReadContract({
+    address: SEALED_VOTE_ADDRESS,
+    abi: SEALED_VOTE_ABI,
+    functionName: 'getTitle',
+    args: [BigInt(pollId)],
+    query: {
+      retry: 3,
+      retryDelay: 1000,
+    },
+  });
+}
+
+export function usePollDescription(pollId: string) {
+  return useReadContract({
+    address: SEALED_VOTE_ADDRESS,
+    abi: SEALED_VOTE_ABI,
+    functionName: 'getDescription',
+    args: [BigInt(pollId)],
+    query: {
+      retry: 3,
+      retryDelay: 1000,
+    },
+  });
+}
+
+export function usePollOptions(pollId: string) {
+  return useReadContract({
+    address: SEALED_VOTE_ADDRESS,
+    abi: SEALED_VOTE_ABI,
+    functionName: 'getOptions',
+    args: [BigInt(pollId)],
+    query: {
+      retry: 3,
+      retryDelay: 1000,
+    },
+  });
+}
+
+export function usePollCreator(pollId: string) {
+  return useReadContract({
+    address: SEALED_VOTE_ADDRESS,
+    abi: SEALED_VOTE_ABI,
+    functionName: 'getCreator',
+    args: [BigInt(pollId)],
+    query: {
+      retry: 3,
+      retryDelay: 1000,
+    },
   });
 }
 
 export function usePollData(pollId: string): PollData | null {
-  const { data: times } = usePollTimes(pollId);
+  const { data: commitEnd } = useCommitEnd(pollId);
   const { data: numOptions } = useNumOptions(pollId);
-  const { data: tallyData } = useTally(pollId);
+  const { data: tally } = useTally(pollId);
+  const { data: title } = usePollTitle(pollId);
+  const { data: description } = usePollDescription(pollId);
+  const { data: options } = usePollOptions(pollId);
+  const { data: creator } = usePollCreator(pollId);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [phase, setPhase] = useState<PollPhase>('COMMIT');
 
   useEffect(() => {
-    if (!times) return;
-
-    const [commitEnd, revealEnd] = times;
-    const now = Math.floor(Date.now() / 1000);
+    if (!commitEnd) return;
     
     const updatePhase = () => {
-      if (now < Number(commitEnd)) {
+      const now = Math.floor(Date.now() / 1000);
+      const commitEndTime = Number(commitEnd);
+      
+      if (now < commitEndTime) {
         setPhase('COMMIT');
-        setTimeRemaining(Number(commitEnd) - now);
-      } else if (now < Number(revealEnd)) {
-        setPhase('REVEAL');
-        setTimeRemaining(Number(revealEnd) - now);
+        setTimeRemaining(commitEndTime - now);
       } else {
-        setPhase('FINALIZE');
-        setTimeRemaining(0);
+        setPhase('REVEAL');
+        setTimeRemaining(0); // Reveal phase is unlimited now
       }
     };
 
     updatePhase();
     const interval = setInterval(updatePhase, 1000);
     return () => clearInterval(interval);
-  }, [times]);
+  }, [commitEnd]);
 
-  if (!times || !numOptions || !tallyData) return null;
+  if (!commitEnd || !numOptions || !tally) return null;
 
-  const [tally, finalized] = tallyData;
+  const totalVotes = tally.reduce((sum, count) => sum + Number(count), 0);
 
   return {
     id: pollId,
-    commitEnd: Number(times[0]),
-    revealEnd: Number(times[1]),
+    title: title || `Poll ${pollId}`,
+    description: description || `This is poll number ${pollId} - a secure blockchain-based voting poll created on TrueCount`,
+    commitEnd: Number(commitEnd),
     numOptions: Number(numOptions),
     tally: tally.map(Number),
-    finalized,
+    options: options && options.length > 0 ? [...options] : Array.from({ length: Number(numOptions) }, (_, i) => `Option ${i + 1}`),
     phase,
     timeRemaining,
+    totalVotes,
+    isProtected: false,
+    creator: creator || '',
   };
 }
 
@@ -108,14 +189,37 @@ export function useCreatePoll() {
     hash,
   });
 
-  const createPoll = (numOptions: number, commitSeconds: number, revealSeconds: number) => {
-    writeContract({
-      address: SEALED_VOTE_ADDRESS,
-      abi: SEALED_VOTE_ABI,
-      functionName: 'createPoll',
-      args: [numOptions, commitSeconds, revealSeconds],
-    });
+  const createPoll = async (numOptions: number, commitHours: number, title: string, description: string, options: string[]) => {
+    // Convert hours to seconds
+    const commitSeconds = commitHours * 3600;
+    console.log('Creating poll with:', { numOptions, commitHours, commitSeconds, title, description, options, address: SEALED_VOTE_ADDRESS });
+    console.log('Current chain ID:', window.ethereum?.chainId);
+    console.log('Current account:', window.ethereum?.selectedAddress);
+    
+    try {
+      // Wait a bit longer to ensure blockchain is ready
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Reset wallet nonce by requesting account access
+      if (window.ethereum?.request) {
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+      }
+      
+      writeContract({
+        address: SEALED_VOTE_ADDRESS,
+        abi: SEALED_VOTE_ABI,
+        functionName: 'createPoll',
+        args: [numOptions, commitSeconds, title, description, options],
+      });
+    } catch (err) {
+      console.error('Error in createPoll:', err);
+    }
   };
+
+  // Log errors for debugging
+  if (error) {
+    console.error('Create poll error:', error);
+  }
 
   return {
     createPoll,
@@ -177,27 +281,3 @@ export function useRevealVote() {
   };
 }
 
-export function useFinalizePoll() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
-    hash,
-  });
-
-  const finalizePoll = (pollId: string) => {
-    writeContract({
-      address: SEALED_VOTE_ADDRESS,
-      abi: SEALED_VOTE_ABI,
-      functionName: 'finalize',
-      args: [BigInt(pollId)],
-    });
-  };
-
-  return {
-    finalizePoll,
-    hash,
-    isPending,
-    isConfirming,
-    isSuccess,
-    error,
-  };
-}

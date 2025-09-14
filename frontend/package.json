@@ -1,6 +1,7 @@
 {
-  "name": "nextjs-shadcn",
-  "version": "0.1.0",
+  "name": "truecount-frontend",
+  "version": "1.0.0",
+  "description": "TrueCount Frontend - Decentralized voting application",
   "private": true,
   "scripts": {
     "dev": "next dev -H 0.0.0.0 --turbopack",
