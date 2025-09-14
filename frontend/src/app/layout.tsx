@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+
+import '@rainbow-me/rainbowkit/styles.css';
+
 import "./globals.css";
 import ClientBody from "./ClientBody";
 import Script from "next/script";
+import { Providers } from "./providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,7 +37,9 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning className="antialiased">
-        <ClientBody>{children}</ClientBody>
+        <Providers>
+          <ClientBody>{children}</ClientBody>
+        </Providers>
       </body>
     </html>
   );

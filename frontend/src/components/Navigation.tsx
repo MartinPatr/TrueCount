@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -54,6 +55,7 @@ export default function Navigation() {
                   {item.name}
                 </Link>
               ))}
+              <ConnectButton />
             </div>
 
             {/* Mobile menu button */}
@@ -88,6 +90,9 @@ export default function Navigation() {
                   {item.name}
                 </Link>
               ))}
+              <div className="pt-2">
+                <ConnectButton />
+              </div>
             </div>
           </div>
         )}

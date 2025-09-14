@@ -1,9 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAccount } from 'wagmi';
+import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import FloatingParticles from '@/components/FloatingParticles';
 import FlowingBackground from '@/components/FlowingBackground';
+import { useCreatePoll } from '@/hooks/usePollData';
+import { showToast } from '@/components/Toast';
 
 export default function CreatePollPage() {
   const [pollTitle, setPollTitle] = useState('');
@@ -11,6 +15,12 @@ export default function CreatePollPage() {
   const [options, setOptions] = useState(['', '']);
   const [password, setPassword] = useState('');
   const [isProtected, setIsProtected] = useState(false);
+  const [commitDuration, setCommitDuration] = useState(7); // days
+  const [revealDuration, setRevealDuration] = useState(3); // days
+
+  const { address, isConnected } = useAccount();
+  const router = useRouter();
+  const { createPoll, isPending, isSuccess, error } = useCreatePoll();
 
   const addOption = () => {
     setOptions([...options, '']);
@@ -29,10 +39,55 @@ export default function CreatePollPage() {
     }
   };
 
+  useEffect(() => {
+    if (isSuccess) {
+      showToast({
+        type: 'success',
+        title: 'Poll Created!',
+        description: 'Your poll has been successfully created on the blockchain.',
+      });
+      // Navigate to the poll page
+      router.push('/find-poll');
+    }
+  }, [isSuccess, router]);
+
+  useEffect(() => {
+    if (error) {
+      showToast({
+        type: 'error',
+        title: 'Creation Failed',
+        description: 'Failed to create the poll. Please try again.',
+      });
+    }
+  }, [error]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle poll creation logic here
-    console.log('Creating poll:', { pollTitle, pollDescription, options, password, isProtected });
+    
+    if (!isConnected) {
+      showToast({
+        type: 'warning',
+        title: 'Wallet Required',
+        description: 'Please connect your wallet to create a poll.',
+      });
+      return;
+    }
+
+    const validOptions = options.filter(option => option.trim() !== '');
+    if (validOptions.length < 2) {
+      showToast({
+        type: 'error',
+        title: 'Invalid Options',
+        description: 'Please provide at least 2 options for your poll.',
+      });
+      return;
+    }
+
+    // Convert days to seconds
+    const commitSeconds = commitDuration * 24 * 60 * 60;
+    const revealSeconds = revealDuration * 24 * 60 * 60;
+
+    createPoll(validOptions.length, commitSeconds, revealSeconds);
   };
 
   return (
@@ -129,6 +184,43 @@ export default function CreatePollPage() {
               </button>
             </div>
 
+            {/* Poll Duration */}
+            <div className="glass rounded-xl p-6">
+              <label className="block text-white font-semibold mb-4">
+                Poll Duration
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-300 mb-2">Commit Phase (days)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={commitDuration}
+                    onChange={(e) => setCommitDuration(Number(e.target.value))}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 transition-all duration-300"
+                  />
+                  <p className="text-sm text-gray-400 mt-1">
+                    How long voters can commit their votes
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-gray-300 mb-2">Reveal Phase (days)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={revealDuration}
+                    onChange={(e) => setRevealDuration(Number(e.target.value))}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 transition-all duration-300"
+                  />
+                  <p className="text-sm text-gray-400 mt-1">
+                    How long voters can reveal their votes
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Password Protection */}
             <div className="glass rounded-xl p-6">
               <div className="flex items-center gap-3 mb-4">
@@ -163,10 +255,16 @@ export default function CreatePollPage() {
             <div className="text-center">
               <button
                 type="submit"
-                className="px-8 py-4 bg-gradient-to-r from-teal-500 to-blue-500 rounded-lg font-semibold text-white text-lg hover:shadow-2xl hover:shadow-teal-500/25 transition-all duration-300 transform hover:scale-105"
+                disabled={isPending || !isConnected}
+                className="px-8 py-4 bg-gradient-to-r from-teal-500 to-blue-500 rounded-lg font-semibold text-white text-lg hover:shadow-2xl hover:shadow-teal-500/25 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
-                Launch poll 🚀
+                {isPending ? 'Creating Poll...' : !isConnected ? 'Connect Wallet to Create' : 'Launch poll 🚀'}
               </button>
+              {!isConnected && (
+                <p className="text-sm text-gray-400 mt-2">
+                  You need to connect your wallet to create a poll
+                </p>
+              )}
             </div>
           </form>
         </div>

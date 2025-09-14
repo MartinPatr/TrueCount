@@ -1,9 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAccount } from 'wagmi';
+import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import FloatingParticles from '@/components/FloatingParticles';
 import FlowingBackground from '@/components/FlowingBackground';
+import { usePollCount, usePollData } from '@/hooks/usePollData';
+import { formatTimeRemaining } from '@/lib/voteUtils';
 
 export default function FindPollPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -13,42 +17,38 @@ export default function FindPollPage() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [selectedPollId, setSelectedPollId] = useState<string | null>(null);
   const [password, setPassword] = useState('');
+  const [polls, setPolls] = useState<any[]>([]);
 
-  // Mock data for demonstration
-  const mockPolls = [
-    {
-      id: '1',
-      title: 'Which project should win the People\'s Choice Award?',
-      description: 'Vote for your favorite project from the second round presentations.',
-      category: 'hackathon',
-      status: 'open',
-      isProtected: false,
-      createdAt: '2024-01-15',
-      votes: 156
-    },
-    {
-      id: '2',
-      title: 'Annual General Meeting Vote',
-      description: 'Important decisions about the organization\'s future direction.',
+  const { address } = useAccount();
+  const { data: pollCount } = usePollCount();
+
+  // Load polls from contract
+  useEffect(() => {
+    if (pollCount) {
+      const pollPromises = [];
+      for (let i = 1; i <= Number(pollCount); i++) {
+        pollPromises.push(loadPollData(i.toString()));
+      }
+      Promise.all(pollPromises).then(setPolls);
+    }
+  }, [pollCount]);
+
+  const loadPollData = async (pollId: string) => {
+    // In a real app, you'd fetch poll metadata from IPFS or a backend
+    // For now, we'll use mock data with real contract data
+    return {
+      id: pollId,
+      title: `Poll #${pollId}`,
+      description: 'A community voting poll',
       category: 'governance',
       status: 'open',
-      isProtected: true,
-      createdAt: '2024-01-14',
-      votes: 89
-    },
-    {
-      id: '3',
-      title: 'Best Programming Language 2024',
-      description: 'What\'s your preferred language for building applications?',
-      category: 'technology',
-      status: 'closed',
       isProtected: false,
-      createdAt: '2024-01-10',
-      votes: 234
-    }
-  ];
+      createdAt: new Date().toISOString(),
+      votes: 0
+    };
+  };
 
-  const filteredPolls = mockPolls.filter(poll => {
+  const filteredPolls = polls.filter(poll => {
     const matchesSearch = poll.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          poll.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          poll.id.includes(searchQuery);
@@ -73,7 +73,7 @@ export default function FindPollPage() {
       setShowPasswordModal(true);
     } else {
       // Navigate to poll details
-      console.log('Accessing poll:', pollId);
+      window.location.href = `/poll/${pollId}`;
     }
   };
 
