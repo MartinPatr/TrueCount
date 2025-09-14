@@ -18,8 +18,8 @@ export default function FindPollPage() {
   const mockPolls = [
     {
       id: '1',
-      title: 'Which team should win the hackathon?',
-      description: 'Vote for your favorite project from the final presentations.',
+      title: 'Which project should win the People\'s Choice Award?',
+      description: 'Vote for your favorite project from the second round presentations.',
       category: 'hackathon',
       status: 'open',
       isProtected: false,
@@ -121,7 +121,7 @@ export default function FindPollPage() {
                   className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 transition-all duration-300"
                 />
                 <p className="text-sm text-gray-400 mt-2">
-                  Example: "e.g., Annual General Meeting Vote"
+                  Example: "e.g., Waterloo Engineering Society President Election Vote"
                 </p>
               </div>
 
